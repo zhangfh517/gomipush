@@ -4,15 +4,28 @@ import(
 	"net/url"
 	"strconv"
 	"context"
+		log "github.com/Sirupsen/logrus"
+
 )
 
+//gomipush.NewClient("security").Tool().FetchClickInfo("package").DoGet(ctx)
 type Tool struct {
 	client *Client
 	targetUrl []string
 	retryTimes int
 	params url.Values
+	requestMethod HttpMethod
 }
-func (t *Tool) AddParam(k, v string) *Tool{
+func (t *Tool) RetryTimes(retryTimes int) *Tool{
+    t.retryTimes = retryTimes
+    return t
+}
+func (t *Tool) RequestMethod(m HttpMethod) *Tool{
+	t.requestMethod = m
+	return t
+}
+
+func (t *Tool) addParam(k, v string) *Tool{
 	t.params.Set(k, v)
 	return t
 }
@@ -20,46 +33,57 @@ func (t *Tool) AddParam(k, v string) *Tool{
 func NewTool(c *Client) *Tool {
 	return &Tool{
 		client: c,
+		retryTimes: 3,
+		params: url.Values{},
+		requestMethod: HTTP_GET,
 	}
 }
 //post
 func (t *Tool) CheckScheduleJobExist(jobId string) *Tool {
 	t.targetUrl = V2_CHECK_SCHEDULE_JOB_EXIST
-	t.AddParam("job_id", jobId)
+	t.addParam("job_id", jobId)
+	t.requestMethod = HTTP_POST
 	return t
 }
 
 //post
 func (t *Tool) DeleteScheduleJob(jobId string) *Tool {
 	t.targetUrl = V2_DELETE_SCHEDULE_JOB
-	t.AddParam("job_id", jobId)
+	t.addParam("job_id", jobId)
+	t.requestMethod = HTTP_POST
+
 	return t
 }
 //post
 func (t *Tool) DeleteScheduleJobKey(jobKey string) *Tool {
 	t.targetUrl = V3_DELETE_SCHEDULE_JOB
-	t.AddParam("jobkey", jobKey)
+	t.addParam("jobkey", jobKey)
+	t.requestMethod = HTTP_POST
+
 	return t
 }
 //post
 func (t *Tool) DeleteTopic(msgId string) *Tool {
 	t.targetUrl = V2_DELETE_BROADCAST_MESSAGE
-	t.AddParam("id", msgId)
+	t.addParam("id", msgId)
+	t.requestMethod = HTTP_POST
+
 	return t
 }
 //get
 func (t *Tool) QueryDeviceAliases(packageName, regId string) *Tool {
 	t.targetUrl = V1_GET_ALL_TOPIC
-	t.AddParam("restricted_package_name", packageName)
-	t.AddParam("registration_id", regId)
-
+	t.addParam("restricted_package_name", packageName)
+	t.addParam("registration_id", regId)
+	t.requestMethod = HTTP_GET
 	return t
 }
 //get
 func (t *Tool) QueryDeviceUserAccounts(packageName, regId string) *Tool {
 	t.targetUrl = V1_GET_ALL_ACCOUNT
-	t.AddParam("restricted_package_name", packageName)
-	t.AddParam("registration_id", regId)
+	t.addParam("restricted_package_name", packageName)
+	t.addParam("registration_id", regId)
+	t.requestMethod = HTTP_GET
 	return t
 }
 //get
@@ -75,66 +99,73 @@ func (t *Tool) QueryDevicePresence(packageName string, regId []string) *Tool {
 		t.targetUrl = V2_REGID_PRESENCE
 		rid = strings.Join(regId, ",")
 	}
-	t.AddParam("registration_id", rid)
-	t.AddParam("restricted_package_name", packageName)
+	t.addParam("registration_id", rid)
+	t.addParam("restricted_package_name", packageName)
+	t.requestMethod = HTTP_GET
 	return t
 }
 //get
 func (t *Tool) QueryInvalidRegIds() *Tool {
 	t.targetUrl = []string{V1_FEEDBACK_INVALID_REGID[0].(string)}
+	t.requestMethod = HTTP_GET
 	return t
 }
 
 func (t *Tool) QueryMessageStatus(msgId string) *Tool {
 	t.targetUrl = V1_MESSAGE_STATUS
-	t.AddParam("msg_id", msgId)
+	t.addParam("msg_id", msgId)
+	t.requestMethod = HTTP_GET
 	return t
 }
 func (t *Tool) QueryMessageGroupStatus(jobKey string) *Tool {
 	t.targetUrl = V1_MESSAGE_STATUS
-	t.AddParam("job_key", jobKey)
+	t.addParam("job_key", jobKey)
+	t.requestMethod = HTTP_GET
 	return t
 }
-func (t *Tool) query_message_status_time_range(beginTime int64, endTime int64) *Tool {
+func (t *Tool) queryMessageStatusTimeRange(beginTime int64, endTime int64) *Tool {
 	t.targetUrl = V1_MESSAGES_STATUS
-	t.AddParam("begin_time", strconv.FormatInt(beginTime, 64))
-	t.AddParam("end_time", strconv.FormatInt(endTime, 64))
+	t.addParam("begin_time", strconv.FormatInt(beginTime, 64))
+	t.addParam("end_time", strconv.FormatInt(endTime, 64))
+	t.requestMethod = HTTP_GET
 	return t
 }
 func (t *Tool) QueryStatData(startDate string, endDate string, packageName string) *Tool {
 	t.targetUrl = V1_GET_MESSAGE_COUNTERS
-	t.AddParam("start_date", startDate)
-	t.AddParam("end_date", endDate)
-	t.AddParam("restricted_package_name", packageName)
+	t.addParam("start_date", startDate)
+	t.addParam("end_date", endDate)
+	t.addParam("restricted_package_name", packageName)
+	t.requestMethod = HTTP_GET
 	return t
 }
 func (t *Tool) ValidateRegIds(regId []string) *Tool {
 	t.targetUrl = V1_VALIDATE_REGID
-	t.AddParam("registration_ids", strings.Join(regId, ","))
+	t.addParam("registration_ids", strings.Join(regId, ","))
+	t.requestMethod = HTTP_GET
 	return t
 }
 func (t *Tool) FetchAckInfo(packageName string) *Tool {
 	t.targetUrl = []string{V1_EMQ_ACK_INFO[0].(string)}
 	//有问题，为啥不是restrict_package_name
-	t.AddParam("package_name", packageName)
+	t.addParam("package_name", packageName)
+	t.requestMethod = HTTP_GET
 	return t
 }
 func (t *Tool) FetchClickInfo(packageName string) *Tool {
 	t.targetUrl = []string{V1_EMQ_CLICK_INFO[0].(string)}
-	t.AddParam("package_name", packageName)
+	log.Infof("targetUrl :%v", t)
+	t.addParam("restricted_package_name", packageName)
+	t.requestMethod = HTTP_GET
 	return t
 }
 func (t *Tool) FetchInvalidRegId(packageName string) *Tool {
 	t.targetUrl = []string{V1_EMQ_INVALID_REGID[0].(string)}
-	t.AddParam("package_name", packageName)
+	t.addParam("package_name", packageName)
+	t.requestMethod = HTTP_GET
 	return t
 }
 
-func (t *Tool) DoGet(ctx context.Context) (*Response, error){
-    return t.client.PerformRequest(ctx, t.targetUrl, t.retryTimes, HTTP_GET, t.params, "")
+func (t *Tool) Do(ctx context.Context) (*Response, error){
+    return t.client.PerformRequest(ctx, t.targetUrl, t.retryTimes, t.requestMethod, t.params, "")
 }
-func (t *Tool) DoPost(ctx context.Context) (*Response, error){
-    return t.client.PerformRequest(ctx, t.targetUrl, t.retryTimes, HTTP_POST, t.params, "")
-}
-
 

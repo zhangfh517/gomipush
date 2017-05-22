@@ -42,6 +42,7 @@ func newResponse(res *http.Response) (*Response, error) {
 			return nil, err
 		}
 		if len(body) > 0 {
+			log.Infof("body: %v",string(body))
 			if err := json.Unmarshal(body, &r); err != nil {
 				return nil, err
 			}
@@ -145,6 +146,9 @@ func (c *Client) Send(msg Message) *SenderService {
 }
 func (c *Client) Subscribe(topic SubscribedTopic) *SubscribeService {
 	return NewSubscribeService(c, topic)
+}
+func (c *Client) Tool() *Tool {
+	return NewTool(c)
 }
 
 func (c *Client) buildRequestUrl(server *Server, requestPath []string) string {

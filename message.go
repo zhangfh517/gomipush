@@ -6,16 +6,17 @@ import (
 "errors"
 "strconv"
 log "github.com/Sirupsen/logrus"
+"fmt"
 
 )
 
 type Message interface {
 	Source() (interface{}, error)
-	RegId(regId []string)
-	Alias(alias []string)
-	UserAccount(userAcct []string)
-	Topic(topic string)
-	MulitTopic(topic []string, op BroadcastTopicOp)
+	RegId(regId []string) //发送给一组设备，不同的registration_id之间用“,”分割
+	Alias(alias []string) //可以提供多个alias，发送给一组设备，不同的alias之间用“,”分割。
+	UserAccount(userAcct []string) //发送消息给设置了该user_account的所有设备。可以提供多个user_account，user_account之间用“,”分割。
+	Topic(topic string) //发送消息给订阅了该topic的所有设备。
+	MulitTopic(topic []string, op BroadcastTopicOp) //Stringtopicstopic列表，使用;$;分割。注: topics参数需要和topic_op参数配合使用，另外topic的数量不能超过5。UNION并集 INTERSECTION交集 EXCEPT差集
 	getRestrictedPackageName() []string
 }
 
@@ -83,13 +84,16 @@ func (base *BaseMessage) Source() (interface{}, error) {
 type AndroidMessage struct {
 	BaseMessage
 	payload string
-	passThrough int
+	passThrough int //0 表示通知栏消息 1 表示透传消息
 	title string
 	description string
-	notifyType int
-	timeToLive int64
-	timeToSend int64
-	notifyId int
+	notifyType NotifyType //DEFAULT_ALL = -1;
+					//DEFAULT_SOUND  = 1;   // 使用默认提示音提示
+					//DEFAULT_VIBRATE = 2;   // 使用默认震动提示
+					//DEFAULT_LIGHTS = 4;    // 使用默认led灯光提示
+	timeToLive int64 //可选项。如果用户离线，设置消息在服务器保存的时间，单位：ms。服务器默认最长保留两周。
+	timeToSend int64 //定时消息，最大支持七天
+	notifyId int    //如果通知栏要显示多条推送消息，需要针对不同的消息设置不同的notify_id（相同notify_id的通知栏
 	extra AndroidExtra
 }
 func NewAndroidMessage(title, description string, passThrough int, restrictedPackageName []string) *AndroidMessage {
@@ -103,23 +107,25 @@ func NewAndroidMessage(title, description string, passThrough int, restrictedPac
 }
 
 type AndroidExtra struct {
-	tricker string
-	notifyForeground string
-	notifyEffect string
-	intentUri string
-	webUri string
-	flowControl int
-	layoutName int
-	layoutValue int
-	jobkey string
+	ticker string //开启通知消息在状态栏滚动显示
+	notifyForeground int //开启/关闭app在前台时的通知弹出。当extra.notify_foreground值为”1″时，app会弹出通知栏消息；当extra.notify_foreground值为”0″时，app不会弹出通知栏消息。注：默认情况下会弹出通知栏消息。
+	notifyEffect int    //“1″：通知栏点击后打开app的Launcher Activity。
+						//“2″：通知栏点击后打开app的任一Activity（开发者还需要传入extra.intent_uri）。
+						//“3″：通知栏点击后打开网页（开发者还需要传入extra.web_uri）。
+	intentUri string //打开一个app组件
+	webUri string //打开一个网页
+	flowControl int //平滑推送的速度
+	layoutName string //
+	layoutValue string
+	jobkey string //推送批次，聚合消息
 	callback string
-	locale string
-	localeNotIn string
-	model string
-	modelNotIn string
-	appVersion string
-	appVersionNotIn string
-	connpt string
+	locale []string //可以接收消息的设备的语言范围，用逗号分隔
+	localeNotIn []string //无法收到消息的设备的语言范围，逗号分隔。
+	model []string //1. 可以收到消息的设备的机型范围，逗号分隔,2.以收到消息的设备的品牌范围，逗号分割。3.可以收到消息的设备的价格范围，逗号分隔。
+	modelNotIn []string //1.无法收到消息的设备的机型范围，逗号分隔
+	appVersion []string //可以接收消息的app版本号，用逗号分割。安卓app版本号来源于manifest文件中的”android:versionName”的值
+	appVersionNotIn []string //无法接收消息的app版本号，用逗号分割。
+	connpt string //指定在特定的网络环境下才能接收到消息。目前仅支持指定”wifi”。
 }
 
 func (ad *AndroidMessage) Source() (interface{}, error) {
@@ -137,14 +143,15 @@ func (ad *AndroidMessage) Source() (interface{}, error) {
 		rq.Set("payload", ad.payload)
 	}
 	rq.Set("pass_through", strconv.Itoa(ad.passThrough))
+
 	if ad.title != "" {
 		rq.Set("title", ad.title)
 	}
 	if ad.description != "" {
 		rq.Set("description", ad.description)
 	}
-	if ad.notifyType != -1 {
-		rq.Set("notify_type", strconv.Itoa(ad.notifyType))
+	if ad.notifyType != 0 {
+		rq.Set("notify_type", fmt.Sprint(ad.notifyType))
 	}
 	if ad.timeToLive > 0 {
 		rq.Set("time_to_live", strconv.FormatInt(ad.timeToLive, 10))
@@ -152,17 +159,17 @@ func (ad *AndroidMessage) Source() (interface{}, error) {
 	if ad.timeToSend > 0 {
 		rq.Set("time_to_Send", strconv.FormatInt(ad.timeToSend, 10))
 	}
-	if ad.notifyId != -1 {
+	if ad.notifyId != 0 {
 		rq.Set("notify_id", strconv.Itoa(ad.notifyId))
 	}
-	if ad.extra.tricker != "" {
-		rq.Set("extra.tricker", ad.extra.tricker)
+	if ad.extra.ticker != "" {
+		rq.Set("extra.ticker", ad.extra.ticker)
 	}
-	if ad.extra.notifyForeground != "" {
-		rq.Set("extra.notify_foreground" ,ad.extra.notifyForeground)
+	if ad.extra.notifyForeground != 0 {
+		rq.Set("extra.notify_foreground" ,strconv.Itoa(ad.extra.notifyForeground))
 	}
-	if ad.extra.notifyEffect != "" {
-		rq.Set("extra.notify_effect", ad.extra.notifyEffect)
+	if ad.extra.notifyEffect != 0 {
+		rq.Set("extra.notify_effect", strconv.Itoa(ad.extra.notifyEffect))
 	}
 	if ad.extra.intentUri != "" {
 		rq.Set("extra.intent_uri", ad.extra.intentUri)
@@ -170,14 +177,14 @@ func (ad *AndroidMessage) Source() (interface{}, error) {
 	if ad.extra.webUri != "" {
 		rq.Set("extra.web_uri", ad.extra.webUri)
 	}
-	if ad.extra.flowControl != -1 {
+	if ad.extra.flowControl != 0 {
 		rq.Set("extra.flow_control", strconv.Itoa(ad.extra.flowControl))
 	}
-	if ad.extra.layoutName != -1 {
-		rq.Set("extra.layout_name", strconv.Itoa(ad.extra.layoutName))
+	if ad.extra.layoutName != "" {
+		rq.Set("extra.layout_name", ad.extra.layoutName)
 	}
-	if ad.extra.layoutValue != -1 {
-		rq.Set("extra.layout_value", strconv.Itoa(ad.extra.layoutValue))
+	if ad.extra.layoutValue != "" {
+		rq.Set("extra.layout_value", ad.extra.layoutValue)
 	}
 	if ad.extra.jobkey != "" {
 		rq.Set("extra.jobkey", ad.extra.jobkey)
@@ -185,23 +192,23 @@ func (ad *AndroidMessage) Source() (interface{}, error) {
 	if ad.extra.callback != "" {
 		rq.Set("extra.callback", ad.extra.callback)
 	}
-	if ad.extra.locale != "" {
-		rq.Set("extra.locale", ad.extra.locale)
+	if len(ad.extra.locale) != 0 {
+		rq.Set("extra.locale", strings.Join(ad.extra.locale, ","))
 	}
-	if ad.extra.localeNotIn != "" {
-		rq.Set("extra.locale_not_in", ad.extra.localeNotIn)
+	if len(ad.extra.localeNotIn) != 0 {
+		rq.Set("extra.locale_not_in", strings.Join(ad.extra.localeNotIn, ","))
 	}
-	if ad.extra.model != "" {
-		rq.Set("extra.model",ad.extra.model)
+	if len(ad.extra.model) != 0 {
+		rq.Set("extra.model",strings.Join(ad.extra.model,","))
 	}
-	if ad.extra.modelNotIn != "" {
-		rq.Set("extra.model_not_in",ad.extra.modelNotIn)
+	if len(ad.extra.modelNotIn) != 0 {
+		rq.Set("extra.model_not_in",strings.Join(ad.extra.modelNotIn, ","))
 	}
-	if ad.extra.appVersion != "" {
-		rq.Set("extra.app_version",ad.extra.appVersion)
+	if len(ad.extra.appVersion) != 0 {
+		rq.Set("extra.app_version",strings.Join(ad.extra.appVersion, ","))
 	}
-	if ad.extra.appVersionNotIn != "" {
-		rq.Set("extra.app_version_not_in",ad.extra.appVersionNotIn)
+	if len(ad.extra.appVersionNotIn) != 0 {
+		rq.Set("extra.app_version_not_in",strings.Join(ad.extra.appVersionNotIn, ","))
 	}
 	if ad.extra.connpt != "" {
 		rq.Set("extra.connpt",ad.extra.connpt)
@@ -210,8 +217,6 @@ func (ad *AndroidMessage) Source() (interface{}, error) {
 		rq.Set("restricted_package_name", strings.Join(ad.restrictedPackageName, ","))
 	}
 
-
-	// ad.Source()
 	return rq, nil
 }
 
@@ -234,7 +239,7 @@ func (ad *AndroidMessage) Description(description string) *AndroidMessage {
 	ad.description = description
 	return ad
 }
-func (ad *AndroidMessage) NotifyType(notifyType int) *AndroidMessage {
+func (ad *AndroidMessage) NotifyType(notifyType NotifyType) *AndroidMessage {
 	ad.notifyType = notifyType
 	return ad
 }
@@ -250,15 +255,15 @@ func (ad *AndroidMessage) NotifyId(notifyId int) *AndroidMessage {
 	ad.notifyId = notifyId
 	return ad
 }
-func (ad *AndroidMessage) Extratricker(tricker string) *AndroidMessage {
-	ad.extra.tricker = tricker
+func (ad *AndroidMessage) Extraticker(ticker string) *AndroidMessage {
+	ad.extra.ticker = ticker
 	return ad
 }
-func (ad *AndroidMessage) ExtraNotifyForeground(notifyForeground string) *AndroidMessage {
+func (ad *AndroidMessage) ExtraNotifyForeground(notifyForeground int) *AndroidMessage {
 	ad.extra.notifyForeground = notifyForeground
 	return ad
 }
-func (ad *AndroidMessage) ExtraNotifyEffect(notifyEffect string) *AndroidMessage {
+func (ad *AndroidMessage) ExtraNotifyEffect(notifyEffect int) *AndroidMessage {
 	ad.extra.notifyEffect = notifyEffect
 	return ad
 }
@@ -274,11 +279,11 @@ func (ad *AndroidMessage) ExtraFlowControl(flowControl int) *AndroidMessage {
 	ad.extra.flowControl = flowControl
 	return ad
 }
-func (ad *AndroidMessage) ExtraLayoutName(layoutName int) *AndroidMessage {
+func (ad *AndroidMessage) ExtraLayoutName(layoutName string) *AndroidMessage {
 	ad.extra.layoutName = layoutName
 	return ad
 }
-func (ad *AndroidMessage) ExtraLayoutValue(layoutValue int) *AndroidMessage {
+func (ad *AndroidMessage) ExtraLayoutValue(layoutValue string) *AndroidMessage {
 	ad.extra.layoutValue = layoutValue
 	return ad
 }
@@ -290,27 +295,27 @@ func (ad *AndroidMessage) ExtraCallback(callback string) *AndroidMessage {
 	ad.extra.callback = callback
 	return ad
 }
-func (ad *AndroidMessage) ExtraLocale(locale string) *AndroidMessage {
+func (ad *AndroidMessage) ExtraLocale(locale []string) *AndroidMessage {
 	ad.extra.locale = locale
 	return ad
 }
-func (ad *AndroidMessage) ExtraLocaleNotIn(localeNotIn string) *AndroidMessage {
+func (ad *AndroidMessage) ExtraLocaleNotIn(localeNotIn []string) *AndroidMessage {
 	ad.extra.localeNotIn = localeNotIn
 	return ad
 }
-func (ad *AndroidMessage) ExtraModel(model string) *AndroidMessage {
+func (ad *AndroidMessage) ExtraModel(model []string) *AndroidMessage {
 	ad.extra.model = model
 	return ad
 }
-func (ad *AndroidMessage) ExtraModelNotIn(modelNotIn string) *AndroidMessage {
+func (ad *AndroidMessage) ExtraModelNotIn(modelNotIn []string) *AndroidMessage {
 	ad.extra.modelNotIn = modelNotIn
 	return ad
 }
-func (ad *AndroidMessage) ExtraAppVersion(appVersion string) *AndroidMessage {
+func (ad *AndroidMessage) ExtraAppVersion(appVersion []string) *AndroidMessage {
 	ad.extra.appVersion = appVersion
 	return ad
 }
-func (ad *AndroidMessage) ExtraAppVersionNotIn(appVersionNotIn string) *AndroidMessage {
+func (ad *AndroidMessage) ExtraAppVersionNotIn(appVersionNotIn []string) *AndroidMessage {
 	ad.extra.appVersionNotIn = appVersionNotIn
 	return ad
 }
@@ -322,10 +327,10 @@ func (ad *AndroidMessage) ExtraConnpt(connpt string) *AndroidMessage {
 
 type IOSMessage struct {
 	BaseMessage
-	description string
+	description string //通知栏展示的通知的描述。
 	apsProperFields IOSApsProperField
-	timeToLive int64
-	timeToSend int64
+	timeToLive int64 //可选项。如果用户离线，设置消息在服务器保存的时间，单位：ms。服务器默认最长保留两周。
+	timeToSend int64 //可选项。定时发送消息。用自1970年1月1日以来00:00:00.0 UTC时间表示（以毫秒为单位的时间）。注：仅支持七天内的定时消息。
 	extra IOSExtra
 }
 
@@ -336,26 +341,36 @@ func NewIOSMessage(description string) *IOSMessage{
 }
 
 type IOSApsProperField struct {
-	title string
-	subtitle string
-	body string
-	mutableContent string
+	title string //	在通知栏展示的通知的标题（支持iOS10及以上版本，如有该字段，会覆盖掉description字段）。
+	subtitle string //	展示在标题下方的子标题（支持iOS10及以上版本，如有该字段，会覆盖掉description字段）。
+	body string //	在通知栏展示的通知的内容（支持iOS10及以上版本，如有该字段，会覆盖掉description字段）。
+	mutableContent string //通知可以修改选项，设置之后，在展示远程通知之前会进入Notification Service Extension中允许程序对通知内容修改（支持iOS10及以上版本）。
+
+
 }
 type IOSExtra struct {
-	soundUrl string
-	badge string
-	category string
+	soundUrl string //	可选项，自定义消息铃声。当值为空时为无声，default为系统默认声音。
+	badge string //可选项。通知角标。
+	category string //可选项。iOS8推送消息快速回复类别。
 }
+
 func (ad *IOSMessage) Source() (interface{}, error) {
 	rq := url.Values{}
-
+	baseRq, err := ad.BaseMessage.Source()
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range baseRq.(url.Values) {
+		log.Infof("ios use base Source: k %s, v %s",k,v[0])
+		rq.Set(k, v[0])
+	}
 	if ad.description != "" {
 		rq.Set("description", ad.description)
 	}
-	if ad.timeToLive != -1 {
+	if ad.timeToLive > 0 {
 		rq.Set("time_to_live", strconv.FormatInt(ad.timeToLive, 10))
 	}
-	if ad.timeToSend != -1 {
+	if ad.timeToSend > 0 {
 		rq.Set("time_to_send", strconv.FormatInt(ad.timeToSend, 10))
 	}
 	if ad.apsProperFields.title != "" {

@@ -4,6 +4,8 @@ import (
 	"net/url"
 	"strings"
 	// "errors"
+	log "github.com/Sirupsen/logrus"
+
 )
 
 //topic := gomipush.NewSubscribedTopic("topic").RestrictedPackageName([]string{"android"})
@@ -19,7 +21,7 @@ type SubscribedTopic struct {
 }
 
 
-func (st *SubscribedTopic) NewSubscribedTopic(topic string) *SubscribedTopic{
+func NewSubscribedTopic(topic string) *SubscribedTopic{
 	return &SubscribedTopic{
 		topic: topic,
 	}
@@ -53,7 +55,7 @@ func (st *SubscribedTopic) Source() interface{} {
 	}
 	if len(st.alias) > 0 {
 		//不确定是alias 还是 aliases
-		params.Set("alias", strings.Join(st.alias, ","))
+		params.Set("aliases", strings.Join(st.alias, ","))
 	}
 	if len(st.category) > 0 {
 		params.Set("category", st.category)
@@ -61,6 +63,7 @@ func (st *SubscribedTopic) Source() interface{} {
 	if len(st.restrictedPackageName) > 0 {
 		params.Set("restricted_package_name", strings.Join(st.restrictedPackageName, ","))
 	}
+	log.Infof("subscribe source : %v", params)
 	return params
 
 }

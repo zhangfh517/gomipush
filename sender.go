@@ -8,12 +8,12 @@ import (
 )
 
 //android
-//msg := gomipush.NewAndroidMessage(title, description , passThrough , restrictedPackageName).NotifyType(1)
-//gomipush.NewClient("security").Send(msg).ToRegId([]string{"a","b"})
-//gomipush.NewClient("security").Send(msg).ToMultiTopic([]string{"a", "b"}, Union)
+//msg := gomipush.NewAndroidMessage(title, description , passThrough , restrictedPackageName)
+//gomipush.NewClient("security").Send(msg).ToRegId([]string{"a","b"}).Do(ctx)
+//gomipush.NewClient("security").Send(msg).ToMultiTopic([]string{"a", "b"}, Union).Do(ctx)
 //ios
 //msg := gomipush.NewIOSMessage(description).TimeToLive(110)
-//gomipush.NewClient("security").Send(msg).ToRegId([]string{"a", "b"})
+//gomipush.NewClient("security").Send(msg).ToRegId([]string{"a", "b"}).Do(ctx)
 
 const (
     BROADCAST_TOPIC_MAX = 5

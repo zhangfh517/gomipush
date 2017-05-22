@@ -11,7 +11,7 @@ type SubscribeType int
 type HttpMethod int
 type BroadcastTopicOp string
 type SenderTarget int
-
+type NotifyType int
 const (
     HTTP_GET HttpMethod = iota
     HTTP_POST
@@ -24,6 +24,13 @@ const (
     TARGET_TYPE_USER_ACCOUNT
     TARGET_TYPE_TOPIC
     TARGET_TYPE_PACKAGE
+)
+
+const (
+    DEFAULT_ALL NotifyType = -1
+    DEFAULT_SOUND NotifyType = 1<<iota/2  // 使用默认提示音提示
+    DEFAULT_VIBRATE   // 使用默认震动提示
+    DEFAULT_LIGHTS    // 使用默认led灯光提示
 )
 
 const (
