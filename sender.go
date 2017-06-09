@@ -79,9 +79,10 @@ func (ss *SenderService) ToMultiTopic(topic []string, topicOp BroadcastTopicOp) 
 }
 
 func (ss *SenderService) Do(ctx context.Context) (*Response, error){
+    // log.Infof("Do: message= %v",ss.message)
     p, err:= ss.message.Source()
     if err != nil {
-        fmt.Println(err)
+        return nil, err
     }
     return ss.client.PerformRequest(ctx, ss.targetUrl, ss.retryTimes, HTTP_POST, p.(url.Values), "")
 }

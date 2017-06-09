@@ -18,42 +18,42 @@ type Error struct {
 	AppStatus  	int 	`json:"-"`
 	AppReason   string  `json:"-"`
 
-	Result  	string 	`json:"result"`
-	Reason  	string 	`json:"reason"`
-	TraceId 	string 	`json:"trace_id"`
-	Code    	int     `json:"code"`
-	Description string  `json:"description"`
+	Result  	string 	`json:"result, omitempty"`
+	Reason  	string 	`json:"reason, omitempty"`
+	TraceId 	string 	`json:"trace_id, omitempty"`
+	Code    	int     `json:"code, omitempty"`
+	Description string  `json:"description, omitempty"`
 }
 func (e *Error) Error() string {
-	return fmt.Sprintf("mipush: Error %d (%s): %s [result: %s, reason: %s, description: %s, code: %d, tracdID: %s]", e.AppStatus, http.StatusText(e.AppStatus), e.AppReason, e.Result, e.Reason, e.Description, e.Code, e. TraceId)
+	if e.Code != 0 {
+		return fmt.Sprintf("mipush Error: request detail(StatusCode %d (%s), reason %s), from server[result: %s, reason: %s, description: %s, code: %d, tracdID: %s]", e.AppStatus, http.StatusText(e.AppStatus), e.AppReason, e.Result, e.Reason, e.Description, e.Code, e. TraceId)
+	}else {
+		return fmt.Sprintf("mipush Error: request detail(StatusCode %d (%s), reason%s)", e.AppStatus, http.StatusText(e.AppStatus), e.AppReason)
+	}
 }
 
 func checkResponse(res *http.Response) error {
 	// 200-299 are valid status codes
 	if res.StatusCode >= 200 && res.StatusCode <= 299 {
-		return nil
+			return createResponseError(res)
+	}else {
+		return &Error{AppStatus: res.StatusCode}
 	}
-	return createResponseError(res)
 }
 
 func createResponseError(res *http.Response) error {
-	if res.StatusCode < 200 || res.StatusCode > 299 {
-		return &Error{AppStatus: res.StatusCode}
-	}
-
 	if res.Body == nil {
-		return &Error{AppStatus: res.StatusCode}
+		return &Error{AppStatus: res.StatusCode, AppReason: "Response body is nil"}
 	}
 	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return &Error{AppStatus: res.StatusCode, AppReason: "Read From res.Body error"}
+		return &Error{AppStatus: res.StatusCode, AppReason: "Read From response body error"}
 	}
 	errReply := new(Error)
 	err = json.Unmarshal(data, errReply)
 	if err != nil {
-		return &Error{AppStatus: res.StatusCode, AppReason: "unmarshal error"}
+		return &Error{AppStatus: res.StatusCode, AppReason: "Unmarshall response body content error"}
 	}
-
 	if errReply.Code == 0 {
 		return nil
 	}

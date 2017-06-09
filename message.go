@@ -5,7 +5,7 @@ import (
 "strings"
 "errors"
 "strconv"
-log "github.com/Sirupsen/logrus"
+// log "github.com/Sirupsen/logrus"
 "fmt"
 
 )
@@ -136,7 +136,7 @@ func (ad *AndroidMessage) Source() (interface{}, error) {
 		return nil, err
 	}
 	for k, v := range baseRq.(url.Values) {
-		log.Infof("use base Source: k %s, v %s",k,v[0])
+		// log.Infof("use base Source: k %s, v %s",k,v[0])
 		rq.Set(k, v[0])
 	}
 	if ad.payload != "" {
@@ -350,7 +350,7 @@ type IOSApsProperField struct {
 }
 type IOSExtra struct {
 	soundUrl string //	可选项，自定义消息铃声。当值为空时为无声，default为系统默认声音。
-	badge string //可选项。通知角标。
+	badge int //可选项。通知角标。
 	category string //可选项。iOS8推送消息快速回复类别。
 }
 
@@ -361,7 +361,7 @@ func (ad *IOSMessage) Source() (interface{}, error) {
 		return nil, err
 	}
 	for k, v := range baseRq.(url.Values) {
-		log.Infof("ios use base Source: k %s, v %s",k,v[0])
+		// log.Infof("ios use base Source: k %s, v %s",k,v[0])
 		rq.Set(k, v[0])
 	}
 	if ad.description != "" {
@@ -388,8 +388,8 @@ func (ad *IOSMessage) Source() (interface{}, error) {
 	if ad.extra.soundUrl != "" {
 		rq.Set("extra.sound_url", ad.extra.soundUrl)
 	}
-	if ad.extra.badge != "" {
-		rq.Set("extra.badge", ad.extra.badge)
+	if ad.extra.badge != 0 {
+		rq.Set("extra.badge", strconv.Itoa(ad.extra.badge))
 	}
 	if ad.extra.category != "" {
 		rq.Set("extra.category", ad.extra.category)
@@ -431,7 +431,7 @@ func (ios *IOSMessage) ExtraSoundUrl(soundUrl string) *IOSMessage{
 	ios.extra.soundUrl = soundUrl
 	return ios
 }
-func (ios *IOSMessage) ExtraBadge(badge string) *IOSMessage{
+func (ios *IOSMessage) ExtraBadge(badge int) *IOSMessage{
 	ios.extra.badge = badge
 	return ios
 }

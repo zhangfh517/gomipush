@@ -42,7 +42,6 @@ func newResponse(res *http.Response) (*Response, error) {
 			return nil, err
 		}
 		if len(body) > 0 {
-			log.Infof("body: %v",string(body))
 			if err := json.Unmarshal(body, &r); err != nil {
 				return nil, err
 			}
@@ -88,8 +87,6 @@ func httpCall(ctx context.Context, c *http.Client, url string, method HttpMethod
 	if len(params) > 0 {
 		urlWithParams += "?" + params.Encode()
 	}
-	log.Info("url:",urlWithParams)
-
 	req, err := newRequest(METHOD_MAP[method], urlWithParams, "application/x-www-form-urlencoded;charset=UTF-8")
 	if err != nil {
 		return nil, err
@@ -109,15 +106,13 @@ func httpCall(ctx context.Context, c *http.Client, url string, method HttpMethod
 		return nil, err
 	}
 	if err :=  checkResponse(res); err != nil {
-		resp, _ := newResponse(res)
-		return resp, err
+		return nil, err
 	}
 	resp, err = newResponse(res)
 	if err != nil {
 		return nil, err
 	}
 	hostList := res.Header.Get("X-PUSH-HOST-LIST")
-	log.Infof("X-PUSH-HOST-LIST: %v", hostList)
 	if len(hostList) > 0 {
 		NewServerSwitch().Initialize(hostList)
 	}
@@ -165,12 +160,12 @@ func (c *Client) PerformRequest(ctx context.Context, requestPath []string, retry
 	sleepTime := 1
 	var err error
 	start := time.Now()
-	log.Infof("select server for request :%v", requestPath)
+	log.Infof("select server for request :%v - %v", requestPath, params)
 	server := NewServerSwitch().SelectServer(requestPath)
 	c.buildProxy()
 
-	for isFail && tryTime < retryTimes {
-		log.Infof("tryTime: %d", tryTime)
+	for isFail && tryTime <= retryTimes {
+		// log.Infof("tryTime: %d", tryTime)
 		resp, err = httpCall(ctx, c.c, c.buildRequestUrl(server, requestPath), method, c.security, params, body, "")
 		if err != nil || time.Now().Sub(start).Seconds() > 5 {
 			server.DecrPriority()
