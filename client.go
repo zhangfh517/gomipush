@@ -136,7 +136,7 @@ func NewClient(security string) *Client{
 	}
 }
 
-func (c *Client) Send(msg Message) *SenderService {
+func (c *Client) Send(msg Message) (*SenderService, error) {
 	return NewSenderService(c, msg)
 }
 func (c *Client) Subscribe(topic SubscribedTopic) *SubscribeService {

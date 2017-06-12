@@ -4,6 +4,7 @@ import (
     "fmt"
     "net/url"
     // log "github.com/Sirupsen/logrus"
+    "errors"
 
 )
 
@@ -24,12 +25,15 @@ type SenderService struct {
     retryTimes int
     targetUrl []string
 }
-func NewSenderService(c *Client, msg Message) *SenderService {
+func NewSenderService(c *Client, msg Message) (*SenderService, error){
+    if msg == nil {
+        return nil,errors.New("messge is nil")
+    }
     return &SenderService{
         client: c,
         retryTimes: 3,
         message: msg,
-    }
+    }, nil
 }
 
 // func (ss *SenderService) Message(msg Message) *SenderService{
