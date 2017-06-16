@@ -126,7 +126,6 @@ type Client struct{
 	token string
 	proxyIp string
 	proxyPort string
-	proxy bool
 }
 
 func NewClient(security string) *Client{
@@ -149,9 +148,6 @@ func (c *Client) Tool() *Tool {
 func (c *Client) buildRequestUrl(server *Server, requestPath []string) string {
 	return http_protocol + "://" + server.GetHost() + requestPath[0]
 }
-func (c *Client) buildProxy() {
-
-}
 func (c *Client) PerformRequest(ctx context.Context, requestPath []string, retryTimes int, method HttpMethod, params url.Values, body string) (*Response, error){
 
 	isFail := true
@@ -162,7 +158,6 @@ func (c *Client) PerformRequest(ctx context.Context, requestPath []string, retry
 	start := time.Now()
 	log.Infof("select server for request :%v - %v", requestPath, params)
 	server := NewServerSwitch().SelectServer(requestPath)
-	c.buildProxy()
 
 	for isFail && tryTime <= retryTimes {
 		// log.Infof("tryTime: %d", tryTime)
@@ -186,9 +181,16 @@ func (c *Client) PerformRequest(ctx context.Context, requestPath []string, retry
 	return resp, err
 }
 
-func (c *Client) Proxy(proxyIp string, proxyPort string) *Client {
+func (c *Client) Proxy(proxyIp string, proxyPort string) (*Client, error) {
 	c.proxyIp = proxyIp
 	c.proxyPort = proxyPort
+	proxyUrl, err := url.Parse(fmt.Sprintf("%s:%s", c.proxyIp, c.proxyPort))
+	if err != nil {
+		return nil, fmt.Errorf("parse proxy url error")
+	}
+
+	proxyClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}}
+	c.c = proxyClient
 	return c
 }
 func (c *Client) Token(token string) *Client {
