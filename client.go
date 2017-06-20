@@ -191,7 +191,7 @@ func (c *Client) Proxy(proxyIp string, proxyPort string) (*Client, error) {
 
 	proxyClient := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}}
 	c.c = proxyClient
-	return c
+	return c, nil
 }
 func (c *Client) Token(token string) *Client {
 	c.token = token
