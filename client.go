@@ -184,7 +184,7 @@ func (c *Client) PerformRequest(ctx context.Context, requestPath []string, retry
 func (c *Client) Proxy(proxyIp string, proxyPort string) (*Client, error) {
 	c.proxyIp = proxyIp
 	c.proxyPort = proxyPort
-	proxyUrl, err := url.Parse(fmt.Sprintf("%s:%s", c.proxyIp, c.proxyPort))
+	proxyUrl, err := url.Parse(fmt.Sprintf("//%s:%s", c.proxyIp, c.proxyPort))
 	if err != nil {
 		return nil, fmt.Errorf("parse proxy url error")
 	}
