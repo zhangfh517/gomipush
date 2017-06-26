@@ -108,7 +108,7 @@ type AndroidMessage struct {
 
 func NewAndroidMessage(title, description string) *AndroidMessage {
 	msg := &AndroidMessage{
-		passThrough : 1,
+		passThrough : 0,
 		title: title,
 		description: description,
 	}
@@ -116,7 +116,7 @@ func NewAndroidMessage(title, description string) *AndroidMessage {
 }
 func NewAndroidMessagePassThrough(payload string) *AndroidMessage {
 	msg := &AndroidMessage{
-		passThrough : 0,
+		passThrough : 1,
 		payload : payload,
 	}
 	return msg
