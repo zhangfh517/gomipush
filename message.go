@@ -106,6 +106,23 @@ func NewAndroidMessage(title, description string, passThrough int, restrictedPac
 	return msg
 }
 
+func NewAndroidMessage(title, description string) *AndroidMessage {
+	msg := &AndroidMessage{
+		passThrough : 1,
+		title: title,
+		description: description,
+	}
+	return msg
+}
+func NewAndroidMessagePassThrough(payload string) *AndroidMessage {
+	msg := &AndroidMessage{
+		passThrough : 0,
+		payload : payload,
+	}
+	return msg
+}
+
+
 type AndroidExtra struct {
 	ticker string //开启通知消息在状态栏滚动显示
 	notifyForeground int //开启/关闭app在前台时的通知弹出。当extra.notify_foreground值为”1″时，app会弹出通知栏消息；当extra.notify_foreground值为”0″时，app不会弹出通知栏消息。注：默认情况下会弹出通知栏消息。
