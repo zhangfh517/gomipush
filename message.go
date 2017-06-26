@@ -96,15 +96,15 @@ type AndroidMessage struct {
 	notifyId int    //如果通知栏要显示多条推送消息，需要针对不同的消息设置不同的notify_id（相同notify_id的通知栏
 	extra AndroidExtra
 }
-func NewAndroidMessage(title, description string, passThrough int, restrictedPackageName []string) *AndroidMessage {
-	msg := &AndroidMessage{
-		title : title,
-		description : description,
-		passThrough : passThrough,
-	}
-	msg.restrictedPackageName = restrictedPackageName
-	return msg
-}
+// func NewAndroidMessage(title, description string, passThrough int, restrictedPackageName []string) *AndroidMessage {
+// 	msg := &AndroidMessage{
+// 		title : title,
+// 		description : description,
+// 		passThrough : passThrough,
+// 	}
+// 	msg.restrictedPackageName = restrictedPackageName
+// 	return msg
+// }
 
 func NewAndroidMessage(title, description string) *AndroidMessage {
 	msg := &AndroidMessage{
