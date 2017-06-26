@@ -1,36 +1,34 @@
 package gomipush
 
-import(
-	"net/http"
+import (
+	"bytes"
 	"context"
 	"encoding/json"
-	log "github.com/Sirupsen/logrus"
-	"io/ioutil"
-	"strings"
-	"io"
 	"fmt"
-	"bytes"
+	log "github.com/Sirupsen/logrus"
+	"io"
+	"io/ioutil"
+	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
 const MAX_BACKOFF_DELAY = 1024000
 
-
 type Response struct {
-	AppStatus int `json:"-"`
+	AppStatus int    `json:"-"`
 	AppReason string `json:"-"`
 
-	Result string `json:"result"`
+	Result  string `json:"result"`
 	TraceID string `json:"trace_id"`
-	Code int `json:"code"`
-	Data struct {
+	Code    int    `json:"code"`
+	Data    struct {
 		Id string `json:"id"`
 	} `json:"data"`
 	Description string `json:"description"`
-	Info string `json:"info"`
+	Info        string `json:"info"`
 }
-
 
 func newResponse(res *http.Response) (*Response, error) {
 	r := &Response{
@@ -67,7 +65,7 @@ func setBodyString(req *http.Request, bodyStr string) {
 	}
 }
 
-func newRequest(method string , url string, contentType string) (*http.Request, error) {
+func newRequest(method string, url string, contentType string) (*http.Request, error) {
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		return nil, err
@@ -80,7 +78,7 @@ func newRequest(method string , url string, contentType string) (*http.Request, 
 // 	return "https://api.xmpush.xiaomi.com"+url
 // }
 
-func httpCall(ctx context.Context, c *http.Client, url string, method HttpMethod, authorization string, params url.Values, body string, token string) (*Response, error){
+func httpCall(ctx context.Context, c *http.Client, url string, method HttpMethod, authorization string, params url.Values, body string, token string) (*Response, error) {
 	var resp *Response
 
 	var urlWithParams string = url
@@ -105,7 +103,7 @@ func httpCall(ctx context.Context, c *http.Client, url string, method HttpMethod
 	if err != nil {
 		return nil, err
 	}
-	if err :=  checkResponse(res); err != nil {
+	if err := checkResponse(res); err != nil {
 		return nil, err
 	}
 	resp, err = newResponse(res)
@@ -119,19 +117,18 @@ func httpCall(ctx context.Context, c *http.Client, url string, method HttpMethod
 	return resp, nil
 }
 
-
-type Client struct{
-	c *http.Client
-	security string
-	token string
-	proxyIp string
+type Client struct {
+	c         *http.Client
+	security  string
+	token     string
+	proxyIp   string
 	proxyPort string
 }
 
-func NewClient(security string) *Client{
+func NewClient(security string) *Client {
 	return &Client{
-		c : http.DefaultClient,
-		security : security,
+		c:        http.DefaultClient,
+		security: security,
 	}
 }
 
@@ -148,7 +145,7 @@ func (c *Client) Tool() *Tool {
 func (c *Client) buildRequestUrl(server *Server, requestPath []string) string {
 	return http_protocol + "://" + server.GetHost() + requestPath[0]
 }
-func (c *Client) PerformRequest(ctx context.Context, requestPath []string, retryTimes int, method HttpMethod, params url.Values, body string) (*Response, error){
+func (c *Client) PerformRequest(ctx context.Context, requestPath []string, retryTimes int, method HttpMethod, params url.Values, body string) (*Response, error) {
 
 	isFail := true
 	tryTime := 0
@@ -164,16 +161,16 @@ func (c *Client) PerformRequest(ctx context.Context, requestPath []string, retry
 		resp, err = httpCall(ctx, c.c, c.buildRequestUrl(server, requestPath), method, c.security, params, body, "")
 		if err != nil || time.Now().Sub(start).Seconds() > 5 {
 			server.DecrPriority()
-		}else {
+		} else {
 			server.IncrPriority()
 		}
 		if err == nil {
 			isFail = false
-		}else {
+		} else {
 			tryTime += 1
 			time.Sleep(time.Duration(sleepTime) * time.Second)
 
-			if 2 * sleepTime < MAX_BACKOFF_DELAY {
+			if 2*sleepTime < MAX_BACKOFF_DELAY {
 				sleepTime *= 2
 			}
 		}
@@ -197,4 +194,3 @@ func (c *Client) Token(token string) *Client {
 	c.token = token
 	return c
 }
-

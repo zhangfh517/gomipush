@@ -1,10 +1,12 @@
 package gomipush
+
 import (
-	"net/http"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"encoding/json"
+	"net/http"
 )
+
 // {
 //   "result": "error",
 //   "reason": "Must input one of: regid/topic/alias/userAccount/miid/geoId/groupId/region",
@@ -13,21 +15,21 @@ import (
 //   "description": "缺少必要的参数"
 // }
 
-
 type Error struct {
-	AppStatus  	int 	`json:"-"`
-	AppReason   string  `json:"-"`
+	AppStatus int    `json:"-"`
+	AppReason string `json:"-"`
 
-	Result  	string 	`json:"result, omitempty"`
-	Reason  	string 	`json:"reason, omitempty"`
-	TraceId 	string 	`json:"trace_id, omitempty"`
-	Code    	int     `json:"code, omitempty"`
-	Description string  `json:"description, omitempty"`
+	Result      string `json:"result, omitempty"`
+	Reason      string `json:"reason, omitempty"`
+	TraceId     string `json:"trace_id, omitempty"`
+	Code        int    `json:"code, omitempty"`
+	Description string `json:"description, omitempty"`
 }
+
 func (e *Error) Error() string {
 	if e.Code != 0 {
-		return fmt.Sprintf("mipush Error: request detail(StatusCode %d (%s), reason %s), from server[result: %s, reason: %s, description: %s, code: %d, tracdID: %s]", e.AppStatus, http.StatusText(e.AppStatus), e.AppReason, e.Result, e.Reason, e.Description, e.Code, e. TraceId)
-	}else {
+		return fmt.Sprintf("mipush Error: request detail(StatusCode %d (%s), reason %s), from server[result: %s, reason: %s, description: %s, code: %d, tracdID: %s]", e.AppStatus, http.StatusText(e.AppStatus), e.AppReason, e.Result, e.Reason, e.Description, e.Code, e.TraceId)
+	} else {
 		return fmt.Sprintf("mipush Error: request detail(StatusCode %d (%s), reason%s)", e.AppStatus, http.StatusText(e.AppStatus), e.AppReason)
 	}
 }
@@ -35,8 +37,8 @@ func (e *Error) Error() string {
 func checkResponse(res *http.Response) error {
 	// 200-299 are valid status codes
 	if res.StatusCode >= 200 && res.StatusCode <= 299 {
-			return createResponseError(res)
-	}else {
+		return createResponseError(res)
+	} else {
 		return &Error{AppStatus: res.StatusCode}
 	}
 }
@@ -61,4 +63,3 @@ func createResponseError(res *http.Response) error {
 	errReply.AppStatus = res.StatusCode
 	return errReply
 }
-
