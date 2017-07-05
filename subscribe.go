@@ -76,7 +76,7 @@ type SubscribeService struct {
 func NewSubscribeService(c *Client, topic SubscribedTopic) *SubscribeService {
 	return &SubscribeService{
 		client:     c,
-		retryTimes: 3,
+		retryTimes: 2,
 		topic:      topic,
 	}
 }

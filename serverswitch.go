@@ -105,7 +105,7 @@ func (ss *ServerSwitch) Initialize(hostList string) {
 			continue
 		}
 		ss.servers = append(ss.servers, NewServer(sp[0], minp, maxp, ds, is))
-		log.Infof("minP: %v, maxP: %v, DescS: %v, IncrS: %v, serverLenght: %v", minp, maxp, ds, is, len(ss.servers))
+		log.Infof("host:%v minP: %v, maxP: %v, DescS: %v, IncrS: %v, serverLenght: %v", sp[0], minp, maxp, ds, is, len(ss.servers))
 
 	}
 	ss.inited = true

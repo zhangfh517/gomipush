@@ -3,6 +3,7 @@ package gomipush
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
@@ -26,7 +27,6 @@ type Response struct {
 	Data        map[string]interface{} `json:"data,omitempty"`
 	Description string                 `json:"description,omitempty"`
 	Info        string                 `json:"info,omitempty"`
-
 }
 
 func newResponse(res *http.Response) (*Response, error) {
@@ -75,7 +75,6 @@ func newRequest(method string, url string, contentType string) (*http.Request, e
 
 func httpCall(ctx context.Context, c *http.Client, url string, method HttpMethod, authorization string, params url.Values, body string, token string) (*Response, error) {
 	var resp *Response
-
 	var urlWithParams string = url
 	if len(params) > 0 {
 		urlWithParams += "?" + params.Encode()
@@ -125,8 +124,13 @@ type Client struct {
 }
 
 func NewClient(security string) *Client {
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+
 	return &Client{
-		c:        http.DefaultClient,
+		c:        client,
 		security: security,
 	}
 }
@@ -147,13 +151,13 @@ func (c *Client) buildRequestUrl(server *Server, requestPath []string) string {
 func (c *Client) PerformRequest(ctx context.Context, requestPath []string, retryTimes int, method HttpMethod, params url.Values, body string) (*Response, error) {
 
 	isFail := true
-	tryTime := 1
+	tryTime := 0
 	var resp *Response = nil
 	sleepTime := 1
 	var err error
 	start := time.Now()
-	log.Infof("select server for request :%v - %v", requestPath, params)
 	server := NewServerSwitch().SelectServer(requestPath)
+	log.Infof("select server for request :%v - %v - %v", server.host, requestPath, params)
 
 	for isFail && tryTime <= retryTimes {
 		resp, err = httpCall(ctx, c.c, c.buildRequestUrl(server, requestPath), method, c.security, params, body, "")

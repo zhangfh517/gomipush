@@ -33,7 +33,7 @@ func NewSenderService(c *Client, msg Message) (*SenderService, error) {
 	}
 	return &SenderService{
 		client:     c,
-		retryTimes: 3,
+		retryTimes: 2,
 		message:    msg,
 	}, nil
 }

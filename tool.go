@@ -2,7 +2,7 @@ package gomipush
 
 import (
 	"context"
-	log "github.com/Sirupsen/logrus"
+	// log "github.com/Sirupsen/logrus"
 	"net/url"
 	"strconv"
 	"strings"
@@ -34,13 +34,13 @@ func (t *Tool) addParam(k, v string) *Tool {
 func NewTool(c *Client) *Tool {
 	return &Tool{
 		client:        c,
-		retryTimes:    3,
+		retryTimes:    2,
 		params:        url.Values{},
 		requestMethod: HTTP_GET,
 	}
 }
 
-//post
+//post test
 func (t *Tool) CheckScheduleJobExist(jobId string) *Tool {
 	t.targetUrl = V2_CHECK_SCHEDULE_JOB_EXIST
 	t.addParam("job_id", jobId)
@@ -48,7 +48,7 @@ func (t *Tool) CheckScheduleJobExist(jobId string) *Tool {
 	return t
 }
 
-//post
+//post test
 func (t *Tool) DeleteScheduleJob(jobId string) *Tool {
 	t.targetUrl = V2_DELETE_SCHEDULE_JOB
 	t.addParam("job_id", jobId)
@@ -57,7 +57,7 @@ func (t *Tool) DeleteScheduleJob(jobId string) *Tool {
 	return t
 }
 
-//post
+//!!post no test
 func (t *Tool) DeleteScheduleJobKey(jobKey string) *Tool {
 	t.targetUrl = V3_DELETE_SCHEDULE_JOB
 	t.addParam("jobkey", jobKey)
@@ -66,10 +66,10 @@ func (t *Tool) DeleteScheduleJobKey(jobKey string) *Tool {
 	return t
 }
 
-//post
+//!!post request successfully but not work
 func (t *Tool) DeleteTopic(msgId string) *Tool {
 	t.targetUrl = V2_DELETE_BROADCAST_MESSAGE
-	t.addParam("id", msgId)
+	t.addParam("msg_id", msgId)
 	t.requestMethod = HTTP_POST
 
 	return t
@@ -138,10 +138,10 @@ func (t *Tool) QueryMessageStatusTimeRange(beginTime int64, endTime int64) *Tool
 	t.requestMethod = HTTP_GET
 	return t
 }
-func (t *Tool) QueryStatData(startDate int64, endDate int64, packageName string) *Tool {
+func (t *Tool) QueryStatData(beginTime int64, endTime int64, packageName string) *Tool {
 	t.targetUrl = V1_GET_MESSAGE_COUNTERS
-	t.addParam("start_date", strconv.FormatInt(startDate, 10))
-	t.addParam("end_date", strconv.FormatInt(endDate, 10))
+	t.addParam("start_date", strconv.FormatInt(beginTime, 10))
+	t.addParam("end_date", strconv.FormatInt(endTime, 10))
 	t.addParam("restricted_package_name", packageName)
 	t.requestMethod = HTTP_GET
 	return t
@@ -153,21 +153,20 @@ func (t *Tool) ValidateRegIds(regId []string) *Tool {
 	return t
 }
 func (t *Tool) FetchAckInfo(packageName string) *Tool {
-	t.targetUrl = []string{V1_EMQ_ACK_INFO[0].(string)}
+	t.targetUrl = V1_EMQ_ACK_INFO
 	//有问题，为啥不是restrict_package_name
 	t.addParam("package_name", packageName)
 	t.requestMethod = HTTP_GET
 	return t
 }
 func (t *Tool) FetchClickInfo(packageName string) *Tool {
-	t.targetUrl = []string{V1_EMQ_CLICK_INFO[0].(string)}
-	log.Infof("targetUrl :%v", t)
-	t.addParam("restricted_package_name", packageName)
+	t.targetUrl = V1_EMQ_CLICK_INFO
+	t.addParam("package_name", packageName)
 	t.requestMethod = HTTP_GET
 	return t
 }
 func (t *Tool) FetchInvalidRegId(packageName string) *Tool {
-	t.targetUrl = []string{V1_EMQ_INVALID_REGID[0].(string)}
+	t.targetUrl = V1_EMQ_INVALID_REGID
 	t.addParam("package_name", packageName)
 	t.requestMethod = HTTP_GET
 	return t

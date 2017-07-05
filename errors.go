@@ -25,14 +25,16 @@ type Error struct {
 	TraceId     string `json:"trace_id,omitempty"`
 	Code        int    `json:"code,omitempty"`
 	Description string `json:"description,omitempty"`
+	ErrorCode   int    `json:"errorCode,omitempty"`
 }
 
 func (e *Error) Error() string {
-	if e.TraceId != "" {
-		return fmt.Sprintf("mipush: Error %d (%s): %s [result: %s, reason: %s, description: %s, code: %d, tracdID: %s]", e.AppStatus, http.StatusText(e.AppStatus), e.AppReason, e.Result, e.Reason, e.Description, e.Code, e.TraceId)
-	} else {
-		return fmt.Sprintf("mipush: Error %d (%s): %s", e.AppStatus, http.StatusText(e.AppStatus), e.AppReason)
+	var code int = e.Code
+	if e.Code == 0 {
+		code = e.ErrorCode
 	}
+	return fmt.Sprintf("mipush: Error %d (%s): %s [result: %s, reason: %s, description: %s, code: %d, tracdID: %s]", e.AppStatus, http.StatusText(e.AppStatus), e.AppReason, e.Result, e.Reason, e.Description, code, e.TraceId)
+
 }
 
 func checkResponse(res *http.Response) error {
@@ -59,7 +61,7 @@ func createResponseError(res *http.Response) error {
 	if err != nil {
 		return &Error{AppStatus: res.StatusCode, AppReason: "Unmarshall response body content error"}
 	}
-	if errReply.Code == 0 {
+	if errReply.Code == 0 && errReply.ErrorCode == 0 {
 		return nil
 	}
 	errReply.AppStatus = res.StatusCode

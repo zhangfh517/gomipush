@@ -6,7 +6,7 @@ const (
 )
 
 type TargetType int
-type RequestType int
+type RequestType string
 type SubscribeType int
 type HttpMethod int
 type BroadcastTopicOp string
@@ -34,9 +34,9 @@ const (
 )
 
 const (
-	Msg RequestType = iota + 1
-	Feedback
-	Emq
+	Msg      RequestType = "1"
+	Feedback RequestType = "2"
+	Emq      RequestType = "3"
 )
 const (
 	RegId SubscribeType = iota + 1
@@ -80,7 +80,7 @@ var (
 		HTTP_POST: "POST",
 	}
 
-	host = host_production
+	host = ""
 
 	V2_SEND          = []string{"/v2/send"}
 	V2_REGID_MESSAGE = []string{"/v2/message/regid"}
@@ -128,7 +128,7 @@ var (
 	V2_CHECK_SCHEDULE_JOB_EXIST = []string{"/v2/schedule_job/exist"}
 	V2_QUERY_SCHEDULE_JOB       = []string{"/v2/schedule_job/query"}
 
-	V1_EMQ_ACK_INFO      = []interface{}{"/msg/ack/info", Emq}
-	V1_EMQ_CLICK_INFO    = []interface{}{"/msg/click/info", Emq}
-	V1_EMQ_INVALID_REGID = []interface{}{"/app/invalid/regid", Emq}
+	V1_EMQ_ACK_INFO      = []string{"/msg/ack/info", string(Emq)}
+	V1_EMQ_CLICK_INFO    = []string{"/msg/click/info", string(Emq)}
+	V1_EMQ_INVALID_REGID = []string{"/app/invalid/regid", string(Emq)}
 )
