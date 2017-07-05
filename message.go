@@ -1,36 +1,34 @@
 package gomipush
 
 import (
-"net/url"
-"strings"
-"errors"
-"strconv"
-// log "github.com/Sirupsen/logrus"
-"fmt"
-
+	"errors"
+	"net/url"
+	"strconv"
+	"strings"
+	// log "github.com/Sirupsen/logrus"
+	"fmt"
 )
 
 type Message interface {
 	Source() (interface{}, error)
-	RegId(regId []string) //发送给一组设备，不同的registration_id之间用“,”分割
-	Alias(alias []string) //可以提供多个alias，发送给一组设备，不同的alias之间用“,”分割。
-	UserAccount(userAcct []string) //发送消息给设置了该user_account的所有设备。可以提供多个user_account，user_account之间用“,”分割。
-	Topic(topic string) //发送消息给订阅了该topic的所有设备。
+	RegId(regId []string)                           //发送给一组设备，不同的registration_id之间用“,”分割
+	Alias(alias []string)                           //可以提供多个alias，发送给一组设备，不同的alias之间用“,”分割。
+	UserAccount(userAcct []string)                  //发送消息给设置了该user_account的所有设备。可以提供多个user_account，user_account之间用“,”分割。
+	Topic(topic string)                             //发送消息给订阅了该topic的所有设备。
 	MulitTopic(topic []string, op BroadcastTopicOp) //Stringtopicstopic列表，使用;$;分割。注: topics参数需要和topic_op参数配合使用，另外topic的数量不能超过5。UNION并集 INTERSECTION交集 EXCEPT差集
 	getRestrictedPackageName() []string
 }
 
 type BaseMessage struct {
-	regId []string
-	alias []string
-	userAccount []string
-	topic []string
-	topicOp BroadcastTopicOp
+	regId                 []string
+	alias                 []string
+	userAccount           []string
+	topic                 []string
+	topicOp               BroadcastTopicOp
 	restrictedPackageName []string
-
 }
 
-func (base *BaseMessage) RegId(regId []string){
+func (base *BaseMessage) RegId(regId []string) {
 	base.regId = regId
 }
 func (base *BaseMessage) Alias(alias []string) {
@@ -46,22 +44,22 @@ func (base *BaseMessage) MulitTopic(topic []string, op BroadcastTopicOp) {
 	base.topic = topic
 	base.topicOp = op
 }
-func (base *BaseMessage) getRestrictedPackageName() []string{
+func (base *BaseMessage) getRestrictedPackageName() []string {
 	return base.restrictedPackageName
 }
 
 func (base *BaseMessage) Source() (interface{}, error) {
 	params := url.Values{}
 	if len(base.regId) > 0 {
-		params.Set("registration_id",strings.Join(base.regId,  ","))
+		params.Set("registration_id", strings.Join(base.regId, ","))
 		return params, nil
 	}
 	if len(base.alias) > 0 {
-		params.Set("alias", strings.Join(base.alias,  ","))
+		params.Set("alias", strings.Join(base.alias, ","))
 		return params, nil
 	}
 	if len(base.userAccount) > 0 {
-		params.Set("user_account", strings.Join(base.userAccount,  ","))
+		params.Set("user_account", strings.Join(base.userAccount, ","))
 		return params, nil
 	}
 	if len(base.topic) == 1 {
@@ -73,76 +71,65 @@ func (base *BaseMessage) Source() (interface{}, error) {
 		if len(base.topicOp) > 0 {
 			params.Set("topic_op", string(base.topicOp))
 			return params, nil
-		}else {
+		} else {
 			return nil, errors.New("need topicOp")
 		}
 	}
 	return nil, errors.New("need target")
 }
 
-
 type AndroidMessage struct {
 	BaseMessage
-	payload string
+	payload     string
 	passThrough int //0 表示通知栏消息 1 表示透传消息
-	title string
+	title       string
 	description string
-	notifyType NotifyType //DEFAULT_ALL = -1;
-					//DEFAULT_SOUND  = 1;   // 使用默认提示音提示
-					//DEFAULT_VIBRATE = 2;   // 使用默认震动提示
-					//DEFAULT_LIGHTS = 4;    // 使用默认led灯光提示
+	notifyType  NotifyType //DEFAULT_ALL = -1;
+	//DEFAULT_SOUND  = 1;   // 使用默认提示音提示
+	//DEFAULT_VIBRATE = 2;   // 使用默认震动提示
+	//DEFAULT_LIGHTS = 4;    // 使用默认led灯光提示
 	timeToLive int64 //可选项。如果用户离线，设置消息在服务器保存的时间，单位：ms。服务器默认最长保留两周。
 	timeToSend int64 //定时消息，最大支持七天
-	notifyId int    //如果通知栏要显示多条推送消息，需要针对不同的消息设置不同的notify_id（相同notify_id的通知栏
-	extra AndroidExtra
-}
-func NewAndroidMessage(title, description string, passThrough int, restrictedPackageName []string) *AndroidMessage {
-	msg := &AndroidMessage{
-		title : title,
-		description : description,
-		passThrough : passThrough,
-	}
-	msg.restrictedPackageName = restrictedPackageName
-	return msg
+	notifyId   int   //如果通知栏要显示多条推送消息，需要针对不同的消息设置不同的notify_id（相同notify_id的通知栏
+	extra      AndroidExtra
 }
 
 func NewAndroidMessage(title, description string) *AndroidMessage {
 	msg := &AndroidMessage{
-		passThrough : 1,
-		title: title,
+		passThrough: 1,
+		title:       title,
 		description: description,
 	}
 	return msg
 }
 func NewAndroidMessagePassThrough(payload string) *AndroidMessage {
 	msg := &AndroidMessage{
-		passThrough : 0,
-		payload : payload,
+		passThrough: 0,
+		payload:     payload,
 	}
 	return msg
 }
 
-
 type AndroidExtra struct {
-	ticker string //开启通知消息在状态栏滚动显示
-	notifyForeground int //开启/关闭app在前台时的通知弹出。当extra.notify_foreground值为”1″时，app会弹出通知栏消息；当extra.notify_foreground值为”0″时，app不会弹出通知栏消息。注：默认情况下会弹出通知栏消息。
-	notifyEffect int    //“1″：通知栏点击后打开app的Launcher Activity。
-						//“2″：通知栏点击后打开app的任一Activity（开发者还需要传入extra.intent_uri）。
-						//“3″：通知栏点击后打开网页（开发者还需要传入extra.web_uri）。
-	intentUri string //打开一个app组件
-	webUri string //打开一个网页
-	flowControl int //平滑推送的速度
-	layoutName string //
-	layoutValue string
-	jobkey string //推送批次，聚合消息
-	callback string
-	locale []string //可以接收消息的设备的语言范围，用逗号分隔
-	localeNotIn []string //无法收到消息的设备的语言范围，逗号分隔。
-	model []string //1. 可以收到消息的设备的机型范围，逗号分隔,2.以收到消息的设备的品牌范围，逗号分割。3.可以收到消息的设备的价格范围，逗号分隔。
-	modelNotIn []string //1.无法收到消息的设备的机型范围，逗号分隔
-	appVersion []string //可以接收消息的app版本号，用逗号分割。安卓app版本号来源于manifest文件中的”android:versionName”的值
+	ticker           string //开启通知消息在状态栏滚动显示
+	notifyForeground int    //开启/关闭app在前台时的通知弹出。当extra.notify_foreground值为”1″时，app会弹出通知栏消息；当extra.notify_foreground值为”0″时，app不会弹出通知栏消息。注：默认情况下会弹出通知栏消息。
+	notifyEffect     int    //“1″：通知栏点击后打开app的Launcher Activity。
+	//“2″：通知栏点击后打开app的任一Activity（开发者还需要传入extra.intent_uri）。
+	//“3″：通知栏点击后打开网页（开发者还需要传入extra.web_uri）。
+	intentUri       string //打开一个app组件
+	webUri          string //打开一个网页
+	flowControl     int    //平滑推送的速度
+	layoutName      string //
+	layoutValue     string
+	jobkey          string //推送批次，聚合消息
+	callback        string
+	locale          []string //可以接收消息的设备的语言范围，用逗号分隔
+	localeNotIn     []string //无法收到消息的设备的语言范围，逗号分隔。
+	model           []string //1. 可以收到消息的设备的机型范围，逗号分隔,2.以收到消息的设备的品牌范围，逗号分割。3.可以收到消息的设备的价格范围，逗号分隔。
+	modelNotIn      []string //1.无法收到消息的设备的机型范围，逗号分隔
+	appVersion      []string //可以接收消息的app版本号，用逗号分割。安卓app版本号来源于manifest文件中的”android:versionName”的值
 	appVersionNotIn []string //无法接收消息的app版本号，用逗号分割。
-	connpt string //指定在特定的网络环境下才能接收到消息。目前仅支持指定”wifi”。
+	connpt          string   //指定在特定的网络环境下才能接收到消息。目前仅支持指定”wifi”。
 }
 
 func (ad *AndroidMessage) Source() (interface{}, error) {
@@ -183,7 +170,7 @@ func (ad *AndroidMessage) Source() (interface{}, error) {
 		rq.Set("extra.ticker", ad.extra.ticker)
 	}
 	if ad.extra.notifyForeground != 0 {
-		rq.Set("extra.notify_foreground" ,strconv.Itoa(ad.extra.notifyForeground))
+		rq.Set("extra.notify_foreground", strconv.Itoa(ad.extra.notifyForeground))
 	}
 	if ad.extra.notifyEffect != 0 {
 		rq.Set("extra.notify_effect", strconv.Itoa(ad.extra.notifyEffect))
@@ -216,19 +203,19 @@ func (ad *AndroidMessage) Source() (interface{}, error) {
 		rq.Set("extra.locale_not_in", strings.Join(ad.extra.localeNotIn, ","))
 	}
 	if len(ad.extra.model) != 0 {
-		rq.Set("extra.model",strings.Join(ad.extra.model,","))
+		rq.Set("extra.model", strings.Join(ad.extra.model, ","))
 	}
 	if len(ad.extra.modelNotIn) != 0 {
-		rq.Set("extra.model_not_in",strings.Join(ad.extra.modelNotIn, ","))
+		rq.Set("extra.model_not_in", strings.Join(ad.extra.modelNotIn, ","))
 	}
 	if len(ad.extra.appVersion) != 0 {
-		rq.Set("extra.app_version",strings.Join(ad.extra.appVersion, ","))
+		rq.Set("extra.app_version", strings.Join(ad.extra.appVersion, ","))
 	}
 	if len(ad.extra.appVersionNotIn) != 0 {
-		rq.Set("extra.app_version_not_in",strings.Join(ad.extra.appVersionNotIn, ","))
+		rq.Set("extra.app_version_not_in", strings.Join(ad.extra.appVersionNotIn, ","))
 	}
 	if ad.extra.connpt != "" {
-		rq.Set("extra.connpt",ad.extra.connpt)
+		rq.Set("extra.connpt", ad.extra.connpt)
 	}
 	if len(ad.restrictedPackageName) > 0 {
 		rq.Set("restricted_package_name", strings.Join(ad.restrictedPackageName, ","))
@@ -236,7 +223,6 @@ func (ad *AndroidMessage) Source() (interface{}, error) {
 
 	return rq, nil
 }
-
 
 func (ad *AndroidMessage) Payload(payload string) *AndroidMessage {
 	ad.payload = payload
@@ -341,33 +327,31 @@ func (ad *AndroidMessage) ExtraConnpt(connpt string) *AndroidMessage {
 	return ad
 }
 
-
 type IOSMessage struct {
 	BaseMessage
-	description string //通知栏展示的通知的描述。
+	description     string //通知栏展示的通知的描述。
 	apsProperFields IOSApsProperField
-	timeToLive int64 //可选项。如果用户离线，设置消息在服务器保存的时间，单位：ms。服务器默认最长保留两周。
-	timeToSend int64 //可选项。定时发送消息。用自1970年1月1日以来00:00:00.0 UTC时间表示（以毫秒为单位的时间）。注：仅支持七天内的定时消息。
-	extra IOSExtra
+	timeToLive      int64 //可选项。如果用户离线，设置消息在服务器保存的时间，单位：ms。服务器默认最长保留两周。
+	timeToSend      int64 //可选项。定时发送消息。用自1970年1月1日以来00:00:00.0 UTC时间表示（以毫秒为单位的时间）。注：仅支持七天内的定时消息。
+	extra           IOSExtra
 }
 
-func NewIOSMessage(description string) *IOSMessage{
+func NewIOSMessage(description string) *IOSMessage {
 	return &IOSMessage{
-		description : description,
+		description: description,
 	}
 }
 
 type IOSApsProperField struct {
-	title string //	在通知栏展示的通知的标题（支持iOS10及以上版本，如有该字段，会覆盖掉description字段）。
-	subtitle string //	展示在标题下方的子标题（支持iOS10及以上版本，如有该字段，会覆盖掉description字段）。
-	body string //	在通知栏展示的通知的内容（支持iOS10及以上版本，如有该字段，会覆盖掉description字段）。
+	title          string //	在通知栏展示的通知的标题（支持iOS10及以上版本，如有该字段，会覆盖掉description字段）。
+	subtitle       string //	展示在标题下方的子标题（支持iOS10及以上版本，如有该字段，会覆盖掉description字段）。
+	body           string //	在通知栏展示的通知的内容（支持iOS10及以上版本，如有该字段，会覆盖掉description字段）。
 	mutableContent string //通知可以修改选项，设置之后，在展示远程通知之前会进入Notification Service Extension中允许程序对通知内容修改（支持iOS10及以上版本）。
-
 
 }
 type IOSExtra struct {
 	soundUrl string //	可选项，自定义消息铃声。当值为空时为无声，default为系统默认声音。
-	badge int //可选项。通知角标。
+	badge    int    //可选项。通知角标。
 	category string //可选项。iOS8推送消息快速回复类别。
 }
 
@@ -415,46 +399,44 @@ func (ad *IOSMessage) Source() (interface{}, error) {
 
 }
 
-func (ios *IOSMessage) Description(description string) *IOSMessage{
+func (ios *IOSMessage) Description(description string) *IOSMessage {
 	ios.description = description
 	return ios
 }
-func (ios *IOSMessage) TimeToLive(timeToLive int64) *IOSMessage{
+func (ios *IOSMessage) TimeToLive(timeToLive int64) *IOSMessage {
 	ios.timeToLive = timeToLive
 	return ios
 }
-func (ios *IOSMessage) TimeToSend(timeToSend int64) *IOSMessage{
+func (ios *IOSMessage) TimeToSend(timeToSend int64) *IOSMessage {
 	ios.timeToSend = timeToSend
 	return ios
 }
 
-func (ios *IOSMessage) ApsTitle(title string) *IOSMessage{
+func (ios *IOSMessage) ApsTitle(title string) *IOSMessage {
 	ios.apsProperFields.title = title
 	return ios
 }
-func (ios *IOSMessage) ApsSubtitle(subtitle string) *IOSMessage{
+func (ios *IOSMessage) ApsSubtitle(subtitle string) *IOSMessage {
 	ios.apsProperFields.subtitle = subtitle
 	return ios
 }
-func (ios *IOSMessage) ApsBody(body string) *IOSMessage{
+func (ios *IOSMessage) ApsBody(body string) *IOSMessage {
 	ios.apsProperFields.body = body
 	return ios
 }
-func (ios *IOSMessage) ApsMutableContent(mutableContent string) *IOSMessage{
+func (ios *IOSMessage) ApsMutableContent(mutableContent string) *IOSMessage {
 	ios.apsProperFields.mutableContent = mutableContent
 	return ios
 }
-func (ios *IOSMessage) ExtraSoundUrl(soundUrl string) *IOSMessage{
+func (ios *IOSMessage) ExtraSoundUrl(soundUrl string) *IOSMessage {
 	ios.extra.soundUrl = soundUrl
 	return ios
 }
-func (ios *IOSMessage) ExtraBadge(badge int) *IOSMessage{
+func (ios *IOSMessage) ExtraBadge(badge int) *IOSMessage {
 	ios.extra.badge = badge
 	return ios
 }
-func (ios *IOSMessage) ExtraCategory(category string) *IOSMessage{
+func (ios *IOSMessage) ExtraCategory(category string) *IOSMessage {
 	ios.extra.category = category
 	return ios
 }
-
-

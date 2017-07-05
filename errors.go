@@ -1,10 +1,13 @@
 package gomipush
+
 import (
-	"net/http"
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"encoding/json"
+	"net/http"
 )
+
 // {
 //   "result": "error",
 //   "reason": "Must input one of: regid/topic/alias/userAccount/miid/geoId/groupId/region",
@@ -13,35 +16,35 @@ import (
 //   "description": "缺少必要的参数"
 // }
 
-
 type Error struct {
-	AppStatus  	int 	`json:"-"`
-	AppReason   string  `json:"-"`
+	AppStatus int    `json:"-"`
+	AppReason string `json:"-"`
 
-	Result  	string 	`json:"result, omitempty"`
-	Reason  	string 	`json:"reason, omitempty"`
-	TraceId 	string 	`json:"trace_id, omitempty"`
-	Code    	int     `json:"code, omitempty"`
-	Description string  `json:"description, omitempty"`
+	Result      string `json:"result,omitempty"`
+	Reason      string `json:"reason,omitempty"`
+	TraceId     string `json:"trace_id,omitempty"`
+	Code        int    `json:"code,omitempty"`
+	Description string `json:"description,omitempty"`
 }
+
 func (e *Error) Error() string {
-	if e.Code != 0 {
-		return fmt.Sprintf("mipush Error: request detail(StatusCode %d (%s), reason %s), from server[result: %s, reason: %s, description: %s, code: %d, tracdID: %s]", e.AppStatus, http.StatusText(e.AppStatus), e.AppReason, e.Result, e.Reason, e.Description, e.Code, e. TraceId)
-	}else {
-		return fmt.Sprintf("mipush Error: request detail(StatusCode %d (%s), reason%s)", e.AppStatus, http.StatusText(e.AppStatus), e.AppReason)
+	if e.TraceId != "" {
+		return fmt.Sprintf("mipush: Error %d (%s): %s [result: %s, reason: %s, description: %s, code: %d, tracdID: %s]", e.AppStatus, http.StatusText(e.AppStatus), e.AppReason, e.Result, e.Reason, e.Description, e.Code, e.TraceId)
+	} else {
+		return fmt.Sprintf("mipush: Error %d (%s): %s", e.AppStatus, http.StatusText(e.AppStatus), e.AppReason)
 	}
 }
 
 func checkResponse(res *http.Response) error {
 	// 200-299 are valid status codes
 	if res.StatusCode >= 200 && res.StatusCode <= 299 {
-			return createResponseError(res)
-	}else {
-		return &Error{AppStatus: res.StatusCode}
+		return createResponseError(res)
 	}
+	return &Error{AppStatus: res.StatusCode}
 }
 
 func createResponseError(res *http.Response) error {
+
 	if res.Body == nil {
 		return &Error{AppStatus: res.StatusCode, AppReason: "Response body is nil"}
 	}
@@ -49,16 +52,16 @@ func createResponseError(res *http.Response) error {
 	if err != nil {
 		return &Error{AppStatus: res.StatusCode, AppReason: "Read From response body error"}
 	}
+	res.Body = ioutil.NopCloser(bytes.NewBuffer(data))
+
 	errReply := new(Error)
-	err = json.Unmarshal(data, errReply)
+	err = json.Unmarshal(data, &errReply)
 	if err != nil {
 		return &Error{AppStatus: res.StatusCode, AppReason: "Unmarshall response body content error"}
 	}
 	if errReply.Code == 0 {
 		return nil
 	}
-
 	errReply.AppStatus = res.StatusCode
 	return errReply
 }
-

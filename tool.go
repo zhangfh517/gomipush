@@ -1,43 +1,45 @@
 package gomipush
-import(
-	"strings"
+
+import (
+	"context"
+	log "github.com/Sirupsen/logrus"
 	"net/url"
 	"strconv"
-	"context"
-		log "github.com/Sirupsen/logrus"
-
+	"strings"
 )
 
 //gomipush.NewClient("security").Tool().FetchClickInfo("package").DoGet(ctx)
 type Tool struct {
-	client *Client
-	targetUrl []string
-	retryTimes int
-	params url.Values
+	client        *Client
+	targetUrl     []string
+	retryTimes    int
+	params        url.Values
 	requestMethod HttpMethod
 }
-func (t *Tool) RetryTimes(retryTimes int) *Tool{
-    t.retryTimes = retryTimes
-    return t
+
+func (t *Tool) RetryTimes(retryTimes int) *Tool {
+	t.retryTimes = retryTimes
+	return t
 }
-func (t *Tool) RequestMethod(m HttpMethod) *Tool{
+func (t *Tool) RequestMethod(m HttpMethod) *Tool {
 	t.requestMethod = m
 	return t
 }
 
-func (t *Tool) addParam(k, v string) *Tool{
+func (t *Tool) addParam(k, v string) *Tool {
 	t.params.Set(k, v)
 	return t
 }
 
 func NewTool(c *Client) *Tool {
 	return &Tool{
-		client: c,
-		retryTimes: 3,
-		params: url.Values{},
+		client:        c,
+		retryTimes:    3,
+		params:        url.Values{},
 		requestMethod: HTTP_GET,
 	}
 }
+
 //post
 func (t *Tool) CheckScheduleJobExist(jobId string) *Tool {
 	t.targetUrl = V2_CHECK_SCHEDULE_JOB_EXIST
@@ -54,6 +56,7 @@ func (t *Tool) DeleteScheduleJob(jobId string) *Tool {
 
 	return t
 }
+
 //post
 func (t *Tool) DeleteScheduleJobKey(jobKey string) *Tool {
 	t.targetUrl = V3_DELETE_SCHEDULE_JOB
@@ -62,6 +65,7 @@ func (t *Tool) DeleteScheduleJobKey(jobKey string) *Tool {
 
 	return t
 }
+
 //post
 func (t *Tool) DeleteTopic(msgId string) *Tool {
 	t.targetUrl = V2_DELETE_BROADCAST_MESSAGE
@@ -70,6 +74,7 @@ func (t *Tool) DeleteTopic(msgId string) *Tool {
 
 	return t
 }
+
 //get
 func (t *Tool) QueryDeviceAliases(packageName, regId string) *Tool {
 	t.targetUrl = V1_GET_ALL_TOPIC
@@ -78,6 +83,7 @@ func (t *Tool) QueryDeviceAliases(packageName, regId string) *Tool {
 	t.requestMethod = HTTP_GET
 	return t
 }
+
 //get
 func (t *Tool) QueryDeviceUserAccounts(packageName, regId string) *Tool {
 	t.targetUrl = V1_GET_ALL_ACCOUNT
@@ -86,16 +92,17 @@ func (t *Tool) QueryDeviceUserAccounts(packageName, regId string) *Tool {
 	t.requestMethod = HTTP_GET
 	return t
 }
+
 //get
 func (t *Tool) QueryDevicePresence(packageName string, regId []string) *Tool {
 	var rid string
 
-	if len(regId) == 1{
+	if len(regId) == 1 {
 		rid = regId[0]
 		t.targetUrl = V1_REGID_PRESENCE
 
 	}
-	if len(regId) > 1{
+	if len(regId) > 1 {
 		t.targetUrl = V2_REGID_PRESENCE
 		rid = strings.Join(regId, ",")
 	}
@@ -104,6 +111,7 @@ func (t *Tool) QueryDevicePresence(packageName string, regId []string) *Tool {
 	t.requestMethod = HTTP_GET
 	return t
 }
+
 //get
 func (t *Tool) QueryInvalidRegIds() *Tool {
 	t.targetUrl = []string{V1_FEEDBACK_INVALID_REGID[0].(string)}
@@ -123,17 +131,17 @@ func (t *Tool) QueryMessageGroupStatus(jobKey string) *Tool {
 	t.requestMethod = HTTP_GET
 	return t
 }
-func (t *Tool) queryMessageStatusTimeRange(beginTime int64, endTime int64) *Tool {
+func (t *Tool) QueryMessageStatusTimeRange(beginTime int64, endTime int64) *Tool {
 	t.targetUrl = V1_MESSAGES_STATUS
-	t.addParam("begin_time", strconv.FormatInt(beginTime, 64))
-	t.addParam("end_time", strconv.FormatInt(endTime, 64))
+	t.addParam("begin_time", strconv.FormatInt(beginTime, 10))
+	t.addParam("end_time", strconv.FormatInt(endTime, 10))
 	t.requestMethod = HTTP_GET
 	return t
 }
-func (t *Tool) QueryStatData(startDate string, endDate string, packageName string) *Tool {
+func (t *Tool) QueryStatData(startDate int64, endDate int64, packageName string) *Tool {
 	t.targetUrl = V1_GET_MESSAGE_COUNTERS
-	t.addParam("start_date", startDate)
-	t.addParam("end_date", endDate)
+	t.addParam("start_date", strconv.FormatInt(startDate, 10))
+	t.addParam("end_date", strconv.FormatInt(endDate, 10))
 	t.addParam("restricted_package_name", packageName)
 	t.requestMethod = HTTP_GET
 	return t
@@ -165,7 +173,6 @@ func (t *Tool) FetchInvalidRegId(packageName string) *Tool {
 	return t
 }
 
-func (t *Tool) Do(ctx context.Context) (*Response, error){
-    return t.client.PerformRequest(ctx, t.targetUrl, t.retryTimes, t.requestMethod, t.params, "")
+func (t *Tool) Do(ctx context.Context) (*Response, error) {
+	return t.client.PerformRequest(ctx, t.targetUrl, t.retryTimes, t.requestMethod, t.params, "")
 }
-
