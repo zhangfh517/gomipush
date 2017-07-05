@@ -75,7 +75,8 @@ func (base *BaseMessage) Source() (interface{}, error) {
 			return nil, errors.New("need topicOp")
 		}
 	}
-	return nil, errors.New("need target")
+	// return nil, errors.New("need target")
+	return params, nil
 }
 
 type AndroidMessage struct {
@@ -94,6 +95,16 @@ type AndroidMessage struct {
 	extra      AndroidExtra
 }
 
+// func NewAndroidMessage(title, description string, passThrough int, restrictedPackageName []string) *AndroidMessage {
+// 	msg := &AndroidMessage{
+// 		title : title,
+// 		description : description,
+// 		passThrough : passThrough,
+// 	}
+// 	msg.restrictedPackageName = restrictedPackageName
+// 	return msg
+// }
+
 func NewAndroidMessage(title, description string) *AndroidMessage {
 	msg := &AndroidMessage{
 		passThrough: 1,
@@ -104,7 +115,7 @@ func NewAndroidMessage(title, description string) *AndroidMessage {
 }
 func NewAndroidMessagePassThrough(payload string) *AndroidMessage {
 	msg := &AndroidMessage{
-		passThrough: 0,
+		passThrough: 1,
 		payload:     payload,
 	}
 	return msg
@@ -161,7 +172,7 @@ func (ad *AndroidMessage) Source() (interface{}, error) {
 		rq.Set("time_to_live", strconv.FormatInt(ad.timeToLive, 10))
 	}
 	if ad.timeToSend > 0 {
-		rq.Set("time_to_Send", strconv.FormatInt(ad.timeToSend, 10))
+		rq.Set("time_to_send", strconv.FormatInt(ad.timeToSend, 10))
 	}
 	if ad.notifyId != 0 {
 		rq.Set("notify_id", strconv.Itoa(ad.notifyId))
@@ -254,6 +265,11 @@ func (ad *AndroidMessage) TimeToSend(timeToSend int64) *AndroidMessage {
 	ad.timeToSend = timeToSend
 	return ad
 }
+func (ad *AndroidMessage) RestrictedPackageName(packages []string) *AndroidMessage {
+	ad.restrictedPackageName = packages
+	return ad
+}
+
 func (ad *AndroidMessage) NotifyId(notifyId int) *AndroidMessage {
 	ad.notifyId = notifyId
 	return ad

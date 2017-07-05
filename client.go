@@ -26,6 +26,7 @@ type Response struct {
 	Data        map[string]interface{} `json:"data,omitempty"`
 	Description string                 `json:"description,omitempty"`
 	Info        string                 `json:"info,omitempty"`
+
 }
 
 func newResponse(res *http.Response) (*Response, error) {
@@ -98,9 +99,6 @@ func httpCall(ctx context.Context, c *http.Client, url string, method HttpMethod
 		return nil, err
 	}
 	defer res.Body.Close()
-
-	// bys, _:= ioutil.ReadAll(res.Body)
-	// log.Info(string(bys))
 
 	if err := checkResponse(res); err != nil {
 		return nil, err
