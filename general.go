@@ -1,8 +1,8 @@
 package gomipush
 
 const (
-	VERSION     = "1.0.3"
-	sdk_version = "GO_SDK_V1.0.3"
+	VERSION     = "1.0.0"
+	sdk_version = "GO_SDK_V1.0.0"
 )
 
 type TargetType int
